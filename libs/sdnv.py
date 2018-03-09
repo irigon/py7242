@@ -8,22 +8,22 @@ class SDNV:
         self.data = data
 
     # given a big int, return an array of encoded bytes
-    def encode(self):
+    def encode(data):
         encoded = b''
         hbit = 0
         while True:
-            byte = hbit | (self.data & 0x7f)
+            byte = hbit | (data & 0x7f)
             hbit = 1 << 7                       # just first byte with hbit==0
             encoded = struct.pack('B', byte) + encoded
-            self.data = self.data >> 7          # consume next 7 bits
-            if self.data == 0:
+            data = data >> 7          # consume next 7 bits
+            if data == 0:
                 break
         return encoded
 
     # given an array of bytes, return an int
-    def decode(self):
+    def decode(data):
         decoded = 0
-        for byte in self.data:
+        for byte in data:
             decoded <<=7
             decoded |= (byte & 0x7f)
         return decoded
