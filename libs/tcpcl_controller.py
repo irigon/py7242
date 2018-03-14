@@ -21,10 +21,16 @@ class TCPCL_Controller:
         self.selector.register(sys.stdin, selectors.EVENT_READ, self.recv_user_input)
         self.tcp_server = None    # tcp_server is optional, do not instantiate on creation
         self.peers = dict()
+        self.shutdown = False
 
     # register a peer
-    def register(self, ip, port, tcpcl_id):
+    def register(self, tcpcl_id, ip, port):
+        print('Registering tcpcl_id {}:ip {}:port {}'.format(tcpcl_id, ip, port))
         self.peers[tcpcl_id] = (ip, port)
+
+    def unregister(self, tcpcl_id):
+        self.peers.pop(tcpcl_id)
+
 
     # register a peer in upcn. The peer should be already locally registered
     def upcn_register(self, tcpcl_id):
@@ -49,17 +55,15 @@ class TCPCL_Controller:
         input_line = stdin.read()
         if input_line == '':           # ctrl + d
             print('User pressed ctrl+d, exiting...')
-            return -1
-        ret = self.clh.parse(input_line.rstrip())
-        if ret < 0:     # exit
-            return -1
-        elif ret == 0:  # valid command, execute
-            return 0
+            self.exit()
+        else:
+            args = input_line.rstrip().split()
+            if len(args) > 0:
+                self.clh.parse(*args) # ignore input as \n or \r, process otherwise
 
+    def exit(self):
+        self.shutdown = True
 
-
-        #print('User input: {}'.format(input_line))
-        # Parse input
 
 
 

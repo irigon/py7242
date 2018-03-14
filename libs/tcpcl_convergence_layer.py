@@ -18,7 +18,13 @@ class TCPCL_CL:
         self.next_hop = selftcpcl_id
 
     def connect (self, tcpcl_id):
-        pass
+        if self.next_hop is None:
+            print("You must set next hop")
+            return 1
+        if tcpcl_id not in self.connections:
+            print("tcpcl_id {} not found. Your id must registered".format(tcpcl_id))
+            return 1
+
 
     def reconnect(self, tcpcl_id):
         pass
@@ -36,6 +42,7 @@ class TCPCL_CL:
     # on \0 shutdown, close socket and remove from connections
     def receive(self, data):
         pass
+
 
 if __name__ == '__main__':
     cl = TCPCL_CL('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
