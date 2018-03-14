@@ -1,6 +1,7 @@
 import fcntl
 import sys
 import os
+import traceback
 
 class CLH:
     def __init__(self, controller):
@@ -29,17 +30,21 @@ class CLH:
                           '\t\t\trestarts connection to peer.',
                           self.reconnect)
         self.register_cmd('register $id $ip $port', 'register/update peer node', self.register)
-        self.register_cmd('send $message $id',
+        self.register_cmd('send $id $message',
                           '\t\tsend message (array of bytes) to a peer.',
                           self.send)
         self.register_cmd('show_peers',
                           '\t\t\tshow registered ids.',
                           self.show_peers)
-        self.register_cmd('startserver $port',
-                          '\t\tstart tcpserver at port "port".',
-                          self.tcpserver)
-        self.register_cmd('statusserver', '\t\t\tinform about tcpserver status [running/stopped]', self.tcpserver)
-        self.register_cmd('stopserver', '\t\t\tstop tcp server', self.tcpserver)
+        self.register_cmd('server_start $port $maxconn',
+                          '\tstart server on port $port for at most $maxconn connections.',
+                          self.server_start)
+        self.register_cmd('server_status',
+                          '\t\t\tquery server status.',
+                          self.server_status)
+        self.register_cmd('server_stop',
+                          '\t\t\tstop server.',
+                          self.server_stop)
         self.register_cmd('unregister $id', '\t\tdelete peer from list', self.unregister)
 
         self.register_cmd('upcn_register $id',
@@ -57,7 +62,12 @@ class CLH:
 
             if len(args) == arg_len:
                 method = self.valid_commands[cmd][2]
-                method(*args)
+                try:
+                    method(*args)
+                except Exception:
+                    print('Error -- exception raised when trying to call method: {}, params: {}'.format(cmd, args))
+                    print('Stacktrace: ')
+                    traceback.print_exc()
             else:
                 print('{} expects {} parameters, but {} were given.'.format(cmd, arg_len, len(args)))
         else:
@@ -70,6 +80,7 @@ class CLH:
 
     def connect(self, *args):
         print('Mock: connect')
+        self.controller.start_client(args[0])
 
     def exit(self, *args):
         self.controller.exit()
@@ -89,14 +100,18 @@ class CLH:
         else:
             print('No peers registered yet. ')
 
-    def tcpserver(self, *args):
-        print('Mock: tcpserver')
+    def server_start(self, *args):
+        print('Starting server on port {} for at most {} connections'.format(args[0], args[1]))
+        self.controller.server_start(int(args[0]), int(args[1]))
+
+    def server_status(self, *args):
+        self.controller.server_status()
+
+    def server_stop(self, *args):
+        self.controller.server_stop()
 
     def register(self, *args):
-        if len(args) != 3:
-            print ('{} arguments. 3 needed. Usage: register $id $ip $port'.format(len(args)))
-        else:
-            self.controller.register(*args)
+        self.controller.register(*args)
 
     def register_upcn_node(self, *args):
         print('Mock: register_upcn_node')
@@ -111,4 +126,4 @@ class CLH:
             self.controller.unregister(*args)
 
     def send(self, *args):
-        print('Mock: send')
+        self.controller.cl.send(*args)

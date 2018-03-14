@@ -1,26 +1,30 @@
 import socket
+import selectors
 
 
 class TCP_Server:
-    def __init__(self, port=4556, max_conn=1, selector=None):
-        self.port = port
+    def __init__(self, max_conn, callback, selector):
         self.max_conn = max_conn
         self.socket = None
+        self.callback = callback
         self.selector = selector
 
     def __del__(self):
         self.stop()
 
-    def start(self, reuse = 1, blocking = False):
+    def start(self, port, reuse = 1, blocking = False):
         if self.socket is None:
             try:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, reuse)
                 self.socket.setblocking(blocking)
-                self.socket.bind(('localhost', self.port))
+                self.socket.bind(('localhost', port))
                 self.socket.listen(self.max_conn)
             except OSError as msg:
+                print('Error starting server on port {}. Is the port already being used?'.format(port))
                 self.socket = None
+                return
+            self.selector.register(self.socket, selectors.EVENT_READ, {'func': self.callback})
 
     def stop(self):
         if self.socket is not None:
@@ -35,8 +39,5 @@ class TCP_Server:
             self.socket = None
 
     def is_running(self):
-        return self.socket is not None
-
-    def register_callback(self, func):
-        self.callback = func
-        pass
+        is_running = self.socket is not None
+        return is_running
