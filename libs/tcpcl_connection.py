@@ -9,6 +9,3 @@ class TCPCL_Connection:
 
     def send(self, data):
         pass
-
-    def register(self):
-        pass

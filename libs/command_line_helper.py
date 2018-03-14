@@ -30,9 +30,9 @@ class CLH:
                           '\t\t\trestarts connection to peer.',
                           self.reconnect)
         self.register_cmd('register $id $ip $port', 'register/update peer node', self.register)
-        self.register_cmd('send $id $message',
+        self.register_cmd('send_to $id $message',
                           '\t\tsend message (array of bytes) to a peer.',
-                          self.send)
+                          self.send_to)
         self.register_cmd('show_peers',
                           '\t\t\tshow registered ids.',
                           self.show_peers)
@@ -91,7 +91,7 @@ class CLH:
             print('    {}: {}'.format(*self.valid_commands[c][:2]))
 
     def next_hop(self, *args):
-        print('Mock: set_next_hop')
+        self.controller.cl.set_next_hop(*args)
 
     def show_peers(self, *args):
         if len(self.controller.peers) > 0:
@@ -111,7 +111,7 @@ class CLH:
         self.controller.server_stop()
 
     def register(self, *args):
-        self.controller.register(*args)
+        self.controller.register(args[0], args[1], int(args[2]))
 
     def register_upcn_node(self, *args):
         print('Mock: register_upcn_node')
@@ -125,5 +125,5 @@ class CLH:
         else:
             self.controller.unregister(*args)
 
-    def send(self, *args):
-        self.controller.cl.send(*args)
+    def send_to(self, *args):
+        self.controller.cl.send_to(*args)

@@ -14,8 +14,15 @@ class TCPCL_CL:
         enc_len = sdnv.encode(len(enc_id))
         return  b'dtn!\x03\x00\x00\x00\x05' + enc_len + enc_id
 
-    def set_next_hop(self, selftcpcl_id):
-        self.next_hop = selftcpcl_id
+    def get_socket_from_id(self, id):
+        conn = [ x for x in self.connections if self.connections[x][0] == id ]
+        if len(conn) != 1:
+            print ('Error -- There should be one connection with id {}, but {} were found.'.format(id, len(conn)))
+            return
+        return self.connections[conn[0]][1]
+
+    def set_next_hop(self, tcpcl_id):
+        self.sock_next_hop = self.get_socket_from_id(tcpcl_id)
 
     # connect as client to a server. E.g: upcn
     # ignore if connection is already stablished
@@ -26,11 +33,10 @@ class TCPCL_CL:
         pass
 
     # for simplicity we just assume that socket will be able to send.
-    def send(self, dst_id, msg):
-        if type(msg) != bytes:
-            print('Message should contain bytes')
-            return
-        print('Sending to {}: {}'.format(dst_id, msg))
+    def send_to(self, peer_id, data):
+        sock = self.get_socket_from_id(peer_id)
+        if sock is not None:
+            sock.sendall(data.encode())
 
     # receive data from network
     # on \0 shutdown, close socket and remove from connections
@@ -45,8 +51,9 @@ class TCPCL_CL:
 
         print('Received {} on "receive"'.format(txt))
 
-
-
+    def add_connection(self, sock, addr):
+        # id not yet set, set it to None
+        self.connections[addr]=[None, sock]
 
 if __name__ == '__main__':
     cl = TCPCL_CL('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')

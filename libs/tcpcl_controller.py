@@ -26,7 +26,18 @@ class TCPCL_Controller:
 
     # register a peer
     def register(self, cl_id, ip, port):
-        print('Registering cl_id {}:ip {}:port {}'.format(cl_id, ip, port))
+        print('Registering (ip, port):cl_id ({},{}):{}'.format(ip, port, cl_id))
+        if (ip, port) not in self.cl.connections:
+            print('No active connections with ({},{})'.format(ip, port))
+            return
+        cur_clid = self.cl.connections[(ip,port)][0]
+        if cur_clid is not None and cur_clid != cl_id:
+            print('Connection {} already registered with this address'.format(cur_clid))
+        else:
+            self.cl.connections[(ip, port)][0] = cl_id
+
+
+
         self.peers[cl_id] = (ip, port)
 
     def unregister(self, cl_id):
@@ -61,23 +72,6 @@ class TCPCL_Controller:
         else:
             print('Server is not running')
 
-
-    '''
-    # start a connection to a already registered peer
-    def start_client(self, cl_id):
-        if cl_id not in self.peers:
-            print('cl_id {} not known. Register it first.'.format(cl_id))
-            return
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.setblocking(0)    # non-blocking socket
-        # an event will be triggered in case the connection was successfuly.
-        data = {'func':self.cl.connect}
-        self.selector.register(s, selectors.EVENT_WRITE, data)
-        self.cl.connect(s)
-
-        # should I also create an event for read?
-    '''
-
     def recv_user_input(self, stdin, data):
         input_line = stdin.read()
         if input_line == '':           # ctrl + d
@@ -94,6 +88,7 @@ class TCPCL_Controller:
         print('Accepting connection from {}'.format(addr))
         data = {'func':self.cl.receive, 'selector':self.selector}
         self.selector.register(new_conn, selectors.EVENT_READ, data)
+        self.cl.add_connection(new_conn, addr)
 
     def exit(self):
         self.shutdown = True
