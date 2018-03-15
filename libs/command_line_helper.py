@@ -2,25 +2,32 @@ import fcntl
 import sys
 import os
 import traceback
+import selectors
 
 class CLH:
     def __init__(self, controller):
-        self.set_input_nonblocking()
+        self.controller = controller
         self.valid_commands = dict()
         self.register_known_commands()
-        self.controller = controller
+
+    def register_callback(self, selector, callback):
+        self.set_input_nonblocking()
+        selector.register(sys.stdin, selectors.EVENT_READ, {'func':callback})
 
     def set_input_nonblocking(self):
         orig_fl = fcntl.fcntl(sys.stdin, fcntl.F_GETFL)
         fcntl.fcntl(sys.stdin, fcntl.F_SETFL, orig_fl | os.O_NONBLOCK)
 
     def register_known_commands(self):
-        self.register_cmd('connect $id',
-                          '\t\t\tconnects to a registered peer.',
-                          self.connect)
         self.register_cmd('clear',
                           '\t\t\t\t\tclear screen.',
                           self.clear)
+        self.register_cmd('connect $id',
+                          '\t\t\tconnects to a registered peer.',
+                          self.connect)
+        self.register_cmd('disconnect $id',
+                          '\t\t\tdisconnects to a registered peer.',
+                          self.disconnect)
         self.register_cmd('exit', '\t\t\t\t\texit program', self.exit)
         self.register_cmd('help', '\t\t\t\t\tshow this help', self.help)
         self.register_cmd('next_hop $id',
@@ -31,12 +38,12 @@ class CLH:
                           self.reconnect)
         self.register_cmd('register $id $ip $port', 'register/update peer node', self.register)
         self.register_cmd('send_to $id $message',
-                          '\t\tsend message (array of bytes) to a peer.',
+                          '\tsend message (array of bytes) to a peer.',
                           self.send_to)
         self.register_cmd('show_peers',
                           '\t\t\tshow registered ids.',
                           self.show_peers)
-        self.register_cmd('server_start $port $maxconn',
+        self.register_cmd('server_start $port $conn',
                           '\tstart server on port $port for at most $maxconn connections.',
                           self.server_start)
         self.register_cmd('server_status',
@@ -82,6 +89,9 @@ class CLH:
         print('Mock: connect')
         self.controller.start_client(args[0])
 
+    def disconnect(self, *args):
+        print('Mock: disconnect')
+
     def exit(self, *args):
         self.controller.exit()
 
@@ -94,14 +104,9 @@ class CLH:
         self.controller.cl.set_next_hop(*args)
 
     def show_peers(self, *args):
-        if len(self.controller.peers) > 0:
-            for p in self.controller.peers:
-                print("id: {}, ip: {}, port: {}".format(p, *self.controller.peers[p]))
-        else:
-            print('No peers registered yet. ')
+        self.controller.cl.show_peers()
 
     def server_start(self, *args):
-        print('Starting server on port {} for at most {} connections'.format(args[0], args[1]))
         self.controller.server_start(int(args[0]), int(args[1]))
 
     def server_status(self, *args):
@@ -111,7 +116,7 @@ class CLH:
         self.controller.server_stop()
 
     def register(self, *args):
-        self.controller.register(args[0], args[1], int(args[2]))
+        self.controller.register_id_manually(args[0], args[1], int(args[2]))
 
     def register_upcn_node(self, *args):
         print('Mock: register_upcn_node')

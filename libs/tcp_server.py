@@ -21,10 +21,23 @@ class TCP_Server:
                 self.socket.bind(('localhost', port))
                 self.socket.listen(self.max_conn)
             except OSError as msg:
-                print('Error starting server on port {}. Is the port already being used?'.format(port))
+                print('Could not start server on port {}: {}'.format(port, msg))
+                try:
+                    self.socket.shutdown(socket.SHUT_RDWR)
+                    self.socket.close()
+                except OSError:
+                    pass
                 self.socket = None
                 return
-            self.selector.register(self.socket, selectors.EVENT_READ, {'func': self.callback})
+            else:
+                try:
+                    self.selector.register(self.socket, selectors.EVENT_READ, {'func': self.callback})
+                except ValueError:
+                    print('Invalid event mask or file descriptor')
+                    raise
+                except KeyError:
+                    print('Object {} is already registered'.format(self.socket))
+                    raise
 
     def stop(self):
         if self.socket is not None:
@@ -32,9 +45,10 @@ class TCP_Server:
                 try:
                     self.selector.unregister(self.socket)
                 except KeyError:
-                    print('It seems the socket was not registered')
+                    print('It seems the socket was not registered (ignoring)')
                 except ValueError:
                     print('Invalid selector on unregister')
+                    raise
             self.socket.close()
             self.socket = None
 
