@@ -1,5 +1,4 @@
 import selectors
-import sys
 
 from libs import tcpcl_convergence_layer
 from libs import tcp_server
@@ -31,13 +30,14 @@ class TCPCL_Controller:
             return
 
         # if (ip, port) exists, rename it.
-        for lists in [self.cl.connections, self.cl.unnamed_connections]:
-            for conn in lists:
+        for list in [self.cl.connections, self.cl.unnamed_connections]:
+            for key, conn in list.items():
                 if conn.getpeername() == (ip, port):
-                    if conn.peer_id == None:    # unnamed
-                        self.cl.set_connection_id(cl_id, (ip, port))
-                    else:                       # rename connection
-                        self.cl.connections[cl_id]=self.cl.connections.pop(conn)
+                    item = list.pop(key)
+                    item.peer_id = cl_id
+                    break
+        self.cl.connections[cl_id]=item
+
 
     def unregister(self, cl_id):
         pass

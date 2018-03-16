@@ -25,19 +25,19 @@ class TCP_Server:
                 try:
                     self.socket.shutdown(socket.SHUT_RDWR)
                     self.socket.close()
-                except OSError:
-                    pass
+                except OSError as msg:
+                    print('Problem shutting the socket down: {}'.format(msg))
                 self.socket = None
                 return
             else:
                 try:
-                    self.selector.register(self.socket, selectors.EVENT_READ, {'func': self.callback})
-                except ValueError:
-                    print('Invalid event mask or file descriptor')
+                    self.selector.register(self.socket, selectors.EVENT_READ,
+                                           {'func': self.callback})
+                except (ValueError, KeyError) as msg:
+                    print('Could not register selector: {}'.format(msg))
                     raise
-                except KeyError:
-                    print('Object {} is already registered'.format(self.socket))
-                    raise
+                else:
+                    print('Started server am localhost:{}'.format(port))
 
     def stop(self):
         if self.socket is not None:
