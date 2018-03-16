@@ -70,7 +70,7 @@ class TCPCL_Controller:
         else:
             print('Server is not running')
 
-    def recv_user_input(self, stdin, data):
+    def recv_user_input(self, stdin, data, mask):
         input_line = stdin.read()
         if input_line == '':           # ctrl + d
             print('User pressed ctrl+d, exiting...')

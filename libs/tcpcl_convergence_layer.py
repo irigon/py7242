@@ -35,41 +35,66 @@ class TCPCL_CL:
     # Tries to establish the connection, setting a trigger for read and write and inserting the header in the out queue
     # on write trigger, send the first queue element if the list is not empty.
     #   unsubscribe ON_WRITE
-    def connect (self, sock, data):
-        peer_id = data['peer_id']
+    def connect (self, addr, port):
+        peer = (addr, port)
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setblocking(False)
+        tc = tcpcl_connection.TCPCL_Connection(s, self.selector)
+        tc.register_callback(self.receive_socket_signal)
+        tc.register_event(selectors.EVENT_WRITE | selectors.EVENT_READ)
+        tc.enqueue(self.get_header())
+        try:
+            s.connect(peer)
+        except BlockingIOError:
+            print('Blocking I/O error on connecting to {}'.format(peer))
+
 
     def reconnect(self, tcpcl_id):
         pass
 
-    # for simplicity we just assume that socket will be able to send.
-    def send_to(self, peer_id, data):
+    # send_to is currently used for debugging, when sending from command line
+    #
+    def send_to(self, peer_id, str_data):
         conn = self.connections[peer_id]
-        # enqueue and register read & write #TODO
-        conn.socket.sendall(data.encode())
+        self.send(conn, str_data.encode())
 
-    def send(self):
-        pass
+    def send(self, conn, byte_data):
+        # enqueue and register read & write #TODO
+        conn.enqueue(byte_data)
+        # register event write if not registered yet
+        conn.set_selector_flags(selectors.EVENT_WRITE | selectors.EVENT_READ)
 
     # receive data from network
     # on \0 shutdown, close socket and remove from connections
-    def receive(self, sock, data):
-        txt = sock.recv(1024)
+    def receive_socket_signal(self, sock, data, mask):
+        if mask & selectors.EVENT_READ:
+            txt = sock.recv(1024)
+            connection = data['tcpcl_conn']
+            if not txt:
+                print('Got disconnected. Cleaning up...')
+                try:
+                    self.selector.unregister(sock)
+                except (KeyError, ValueError) as msg:
+                    print('Error unregistered socket: {}'.format(msg))
+                    raise
+                finally:
+                    if connection.peer_id is None: # remove from the noname list
+                        del self.unnamed_connections[connection.getpeername()]
+                    else:
+                        del self.connections[connection.peer_id]
+            elif self.is_header(txt):
+                self.receive_header(txt, connection)
+            elif self.is_datasegment(txt):
+                self.receive_bundle(txt, connection)
+            else:
+                print('ERROR - Corrupted packet ignored')
 
-        if not txt:
-            print('Got disconnected. Cleaning up...')
-            try:
-                data['selector'].unregister(sock)
-            except (KeyError, ValueError) as msg:
-                print('Error unregistered socket: {}'.format(msg))
-                raise
-            finally:
-                connection = data['tcpcl_conn']
-                if connection.peer_id is None: # remove from the noname list
-                    del self.unnamed_connections[connection.getpeername()]
-                else:
-                    del self.connections[connection.peer_id]
-
-        print('Received {} on "receive"'.format(txt))
+        elif mask & selectors.EVENT_WRITE:
+            print('Selectors.write')
+            data['tcpcl_conn'].send()
+        else:
+            print('Warning: que mascara é essa?')
 
     def show_peers(self):
         print('Registered peers:')
@@ -84,24 +109,24 @@ class TCPCL_CL:
     # receive connection from tcp server.
     # since we don't know the peer's id, we add to a list of unamed_connections, untill
     # the header is received or the connection is closed
-    def recv_new_connection(self, sock, data):
+    def recv_new_connection(self, sock, data, mask):
         new_conn, addr = sock.accept()
-        new_conn.setblocking(False)
         print('Accepting connection from {}'.format(addr))
-        tc = tcpcl_connection.TCPCL_Connection(new_conn)
-        data = {'func':self.receive, 'tcpcl_conn':tc, 'selector':self.selector}
-        try:
-            self.selector.register(new_conn, selectors.EVENT_READ, data)
-        except (ValueError, KeyError) as mesg:
-            print('Invalid event mask or file descriptor', mesg)
-            del(tc)
-            raise
-        else:
-            peers = tc.getpeername()
-            self.unnamed_connections[peers] = tc
+
+        # every connection should have its selector, since we need to
+        # turn the selector on/off for write independently
+        tc = tcpcl_connection.TCPCL_Connection(new_conn, self.selector)
+        tc.register_callback(self.receive_socket_signal)
+        tc.register_event(selectors.EVENT_READ)
+        peers = tc.getpeername()
+        self.unnamed_connections[peers] = tc
+        # send_header
+        self.send(tc, self.get_header())
+
+
+    # yet to be implemented
     def add_connection(self, sock):
-        # id not yet set, set it to None
-        self.connections[sock]=[None, []]
+        pass
 
     def get_unnamed_conn_index(self, peername):
         return next((idx for idx, tc_conn in enumerate(self.unnamed_connections)
@@ -112,6 +137,26 @@ class TCPCL_CL:
             self.connections[new_id] = self.unnamed_connections.pop(peername)
         else:
             print('There is no registered node on {}'.format(peername))
+
+    def receive_header(self, data, tcpcl_conn):
+        print('header received: {} : {}'.format(data, data.hex()))
+        result = self.decode_tcpcl_contact_header(data)
+        tcpcl_conn.peer_id=result['eid']
+        self.connections[tcpcl_conn.peer_id]=tcpcl_conn
+        pass
+
+    def receive_bundle(self, data):
+        print('bundle received: {} : {}'.format(data, data.hex()))
+        pass
+
+    def is_header(self, data):
+        return data.startswith(b'dtn!')
+
+    def decode(self, header):
+        pass
+
+    def sdnv_read(self, buffer, offset=0):
+        pass
 
 if __name__ == '__main__':
     cl = TCPCL_CL('TestingCreation')

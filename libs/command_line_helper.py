@@ -4,6 +4,7 @@ import os
 import traceback
 import selectors
 
+
 class CLH:
     def __init__(self, controller):
         self.controller = controller
@@ -22,7 +23,7 @@ class CLH:
         self.register_cmd('clear',
                           '\t\t\t\t\tclear screen.',
                           self.clear)
-        self.register_cmd('connect $id',
+        self.register_cmd('connect $addr $port',
                           '\t\t\tconnects to a registered peer.',
                           self.connect)
         self.register_cmd('disconnect $id',
@@ -66,7 +67,6 @@ class CLH:
     def parse(self, cmd, *args):
         if cmd in self.valid_commands:
             arg_len = len(self.valid_commands[cmd][0].split())-1
-
             if len(args) == arg_len:
                 method = self.valid_commands[cmd][2]
                 try:
@@ -86,8 +86,7 @@ class CLH:
         os.system('clear')
 
     def connect(self, *args):
-        print('Mock: connect')
-        self.controller.start_client(args[0])
+        self.controller.cl.connect(args[0], int(args[1]))
 
     def disconnect(self, *args):
         print('Mock: disconnect')
