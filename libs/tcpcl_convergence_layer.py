@@ -25,7 +25,7 @@ class TCPCL_CL:
     # is basically set default route.
     # when a send is used to an id that is unknown, the message is sent to the next hop.
     # if next_hop is not set, an exception should be raised.
-    def set_next_hop(self, tcpcl_id):
+    def set_next_hop(self, ns):
         assert tcpcl_id in self.connections, "{} is not a valid id".format(tcpcl_id)
         self.sock_next_hop = self.connections[tcpcl_id]
         print('Next hop set to {}: {}'.format(tcpcl_id, self.connections[tcpcl_id].getpeername()))
@@ -35,8 +35,8 @@ class TCPCL_CL:
     # Tries to establish the connection, setting a trigger for read and write and inserting the header in the out queue
     # on write trigger, send the first queue element if the list is not empty.
     #   unsubscribe ON_WRITE
-    def connect (self, addr, port):
-        peer = (addr, port)
+    def connect (self, ns):
+        peer = (ns.addr, ns.port)
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(False)
@@ -55,9 +55,9 @@ class TCPCL_CL:
 
     # send_to is currently used for debugging, when sending from command line
     #
-    def send_to(self, peer_id, str_data):
-        conn = self.connections[peer_id]
-        self.send(conn, str_data.encode())
+    def send_to(self, ns):
+        conn = self.connections[ns.peer_id]
+        self.send(conn, ns.str_data.encode())
 
     def send(self, conn, byte_data):
         # enqueue and register read & write #TODO

@@ -1,15 +1,15 @@
+import argparse
 import fcntl
 import sys
 import os
-import traceback
 import selectors
-
 
 class CLH:
     def __init__(self, controller):
         self.controller = controller
         self.valid_commands = dict()
-        self.register_known_commands()
+        self.register_cmds()
+        self.conf_parser()
 
     def register_callback(self, selector, callback):
         self.set_input_nonblocking()
@@ -19,115 +19,85 @@ class CLH:
         orig_fl = fcntl.fcntl(sys.stdin, fcntl.F_GETFL)
         fcntl.fcntl(sys.stdin, fcntl.F_SETFL, orig_fl | os.O_NONBLOCK)
 
-    def register_known_commands(self):
-        self.register_cmd('clear',
-                          '\t\t\t\t\tclear screen.',
-                          self.clear)
-        self.register_cmd('connect $addr $port',
-                          '\t\t\tconnects to a registered peer.',
-                          self.connect)
-        self.register_cmd('disconnect $id',
-                          '\t\t\tdisconnects to a registered peer.',
-                          self.disconnect)
-        self.register_cmd('exit', '\t\t\t\t\texit program', self.exit)
-        self.register_cmd('help', '\t\t\t\t\tshow this help', self.help)
-        self.register_cmd('next_hop $id',
-                          '\t\t\tset peer $id as default route.',
-                          self.next_hop)
-        self.register_cmd('reconnect $id',
-                          '\t\t\trestarts connection to peer.',
-                          self.reconnect)
-        self.register_cmd('register $id $ip $port', 'register/update peer node', self.register)
-        self.register_cmd('send_to $id $message',
-                          '\tsend message (array of bytes) to a peer.',
-                          self.send_to)
-        self.register_cmd('show_peers',
-                          '\t\t\tshow registered ids.',
-                          self.show_peers)
-        self.register_cmd('server_start $port $conn',
-                          '\tstart server on port $port for at most $maxconn connections.',
-                          self.server_start)
-        self.register_cmd('server_status',
-                          '\t\t\tquery server status.',
-                          self.server_status)
-        self.register_cmd('server_stop',
-                          '\t\t\tstop server.',
-                          self.server_stop)
-        self.register_cmd('unregister $id', '\t\tdelete peer from list', self.unregister)
+    def register_cmds(self):
+        for func in [self.clear, self.connect, self.disconnect, self.exit, self.nexthop,
+                     self.show_peers, self.server, self.register, self.register_upcn_node,
+                     self.reconnect, self.unregister, self.send_to]:
+            self.valid_commands[func.__name__] = func
 
-        self.register_cmd('upcn_register $id',
-                          '\t\tregister node with upcn a running server. ',
-                          self.register_upcn_node)
+    def conf_parser(self):
+        self.parser = argparse.ArgumentParser('tcpcl command line parser')
+        subparsers = self.parser.add_subparsers(title='commands', description='list of available commands')
+        sp_clear = subparsers.add_parser('clear', aliases=['cls', 'clean'], description='clear screen')
+        sp_connect = subparsers.add_parser('connect', description='connect to a tcpcl node')
+        sp_connect.add_argument('addr', type=str, help='destination address')
+        sp_connect.add_argument('port', type=int, help='destination port')
+        sp_disconnect = subparsers.add_parser('disconnect', description='disconnects from a registered peer')
+        sp_disconnect.add_argument('id', type=str, help='peer id')
+        sp_exit = subparsers.add_parser('exit', description='exit tcpcl')
+        sp_next_hop = subparsers.add_parser('nexthop', description='set "default route"')
+        sp_next_hop.add_argument('id', type=str, help='next hop id')
+        sp_reconnect = subparsers.add_parser('reconnect', description='restarts connection to peer')
+        sp_reconnect.add_argument('id', type=str, help='peer id')
+        sp_register = subparsers.add_parser('register', description='register/update peer node (debug)')
+        sp_register.add_argument('id', type=str, help='peer id')
+        sp_register.add_argument('ip', type=str, help='peer ip address')
+        sp_register.add_argument('port', type=int, help='peer port')
+        sp_send = subparsers.add_parser('send', description='send a string to a peer')
+        sp_send.add_argument('id', type=str, help='peer id')
+        sp_send.add_argument('message', type=str, help='a string to be sent')
+        sp_show = subparsers.add_parser('show_peers', description='show system information')
+        sp_server = subparsers.add_parser('server', description='tcp server commands')
+        sp_server.add_argument('action', choices=['start', 'stop', 'status'], type=str, help='start/stop/status')
+        sp_server.add_argument('port', nargs='?', type=int, help='port number to which the server should listen')
+        sp_server.add_argument('max_conn', nargs='?', type=int, help='max number of connections the server should handle')
+        sp_unregister = subparsers.add_parser('unregister', description='unregister node (debug)')
+        sp_unregister.add_argument('id', type=str, help='peer id')
 
-
-    def register_cmd(self, alias, help,  func):
-        cmd_name = alias.split()[0]
-        self.valid_commands[cmd_name] = (alias, help, func)
-
-    def parse(self, cmd, *args):
-        if cmd in self.valid_commands:
-            arg_len = len(self.valid_commands[cmd][0].split())-1
-            if len(args) == arg_len:
-                method = self.valid_commands[cmd][2]
-                try:
-                    method(*args)
-                except Exception:
-                    print('Error -- exception raised when trying to call method: {}, params: {}'.format(cmd, args))
-                    print('Stacktrace: ')
-                    traceback.print_exc()
-            else:
-                print('{} expects {} parameters, but {} were given.'.format(cmd, arg_len, len(args)))
-        else:
-            print('Invalid input. Try "help" for valid commands.')
+    def new_parser(self, *arglist):
+        try:
+            nspace=self.parser.parse_args(arglist)
+            method_name=arglist[0]
+            if method_name in self.valid_commands:
+                self.valid_commands[method_name](nspace)
+        except:
+            print('Exception on command line')
+            pass
 
     ## -- Commands
 
-    def clear(self, *args):
+    def clear(self, ns):
         os.system('clear')
 
-    def connect(self, *args):
-        self.controller.cl.connect(args[0], int(args[1]))
+    def connect(self, ns):
+        self.controller.cl.connect(ns)
 
-    def disconnect(self, *args):
+    def disconnect(self, ns):
         print('Mock: disconnect')
 
-    def exit(self, *args):
+    def exit(self, ns):
         self.controller.exit()
 
-    def help(self, *args):
-        print('Command line help: ')
-        for c in sorted(self.valid_commands):
-            print('    {}: {}'.format(*self.valid_commands[c][:2]))
-
-    def next_hop(self, *args):
-        self.controller.cl.set_next_hop(*args)
+    def nexthop(self, ns):
+        self.controller.cl.set_next_hop(ns)
 
     def show_peers(self, *args):
         self.controller.cl.show_peers()
 
-    def server_start(self, *args):
-        self.controller.server_start(int(args[0]), int(args[1]))
+    def server(self, ns):
+        self.controller.server(ns)
 
-    def server_status(self, *args):
-        self.controller.server_status()
+    def register(self, ns):
+        self.controller.register_id_manually(ns)
 
-    def server_stop(self, *args):
-        self.controller.server_stop()
-
-    def register(self, *args):
-        self.controller.register_id_manually(args[0], args[1], int(args[2]))
-
-    def register_upcn_node(self, *args):
+    def register_upcn_node(self, ns):
         print('Mock: register_upcn_node')
 
-    def reconnect(self, *args):
+    def reconnect(self, ns):
         print('Mock: reconnect')
 
-    def unregister(self, *args):
-        if len(args) != 1:
-            print ('{} arguments. 1 needed. Usage: unregister $id'.format(len(args)))
-        else:
-            self.controller.unregister(*args)
+    def unregister(self, ns):
+        self.controller.unregister(ns)
 
-    def send_to(self, *args):
-        self.controller.cl.send_to(*args)
+    def send_to(self, ns):
+        self.controller.cl.send_to(ns)

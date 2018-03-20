@@ -22,53 +22,53 @@ class TCPCL_Controller:
 
     # this function is called from command line and it is a wrapper for the function
     # that belongs to convergence layer, that sets the id when the header arrives
-    def register_id_manually(self, cl_id, ip, port):
+    def register_id_manually(self, ns):
         # if cl_id exists, ignore
-        if cl_id in self.cl.connections:
+        if ns.id in self.cl.connections:
             print('{} is already set to the connection: {}. Ignoring...'.
-                  format(cl_id, self.cl.connections[cl_id].getpeername()))
+                  format(ns.id, self.cl.connections[ns.id].getpeername()))
             return
 
         # if (ip, port) exists, rename it.
         for list in [self.cl.connections, self.cl.unnamed_connections]:
             for key, conn in list.items():
-                if conn.getpeername() == (ip, port):
+                if conn.getpeername() == (ns.ip, ns.port):
                     item = list.pop(key)
-                    item.peer_id = cl_id
+                    item.peer_id = ns.id
                     break
-        self.cl.connections[cl_id]=item
+        self.cl.connections[ns.id]=item
 
 
-    def unregister(self, cl_id):
+    def unregister(self, ns):
         pass
 
 
     # register a peer in upcn. The peer should be already locally registered
-    def upcn_register(self, cl_id):
+    def upcn_register(self, ns):
         pass
 
-    # start listening in port 'port' for connections
-    def server_start(self, port, max_conn):
-        if self.tcp_server is None:         # New server
-            self.tcp_server = tcp_server.TCP_Server(max_conn, self.cl.recv_new_connection, self.selector)
-        elif self.tcp_server.is_running():  # For simplicity we will start at most one server
-            print('Server is already running. Stop it first.')
-            return
-        self.tcp_server.start(port)
-
-    # stop connection
-    # clean up
-    def server_stop(self):
-        if self.tcp_server:
-            self.tcp_server.stop()
-        else:
-            print('There is no server running')
-
-    def server_status(self):
-        if self.tcp_server is not None and self.tcp_server.is_running():
-            print('Server is running')
-        else:
-            print('Server is not running')
+    def server(self, ns):
+        if ns.action == 'start':
+            if ns.max_conn is None or ns.port is None:
+                print('On server start parameters "max_con" and "port" are required.')
+                return
+            if self.tcp_server is None:  # New server
+                self.tcp_server = tcp_server.TCP_Server(ns.max_conn, self.cl.recv_new_connection, self.selector)
+            elif self.tcp_server.is_running():  # For simplicity we will start at most one server
+                print('Server is already running. Stop it first.')
+                return
+            self.tcp_server.start(ns.port)
+        elif ns.action == 'stop':
+            if self.tcp_server:
+                self.tcp_server.stop()
+                print('Stopping server...')
+            else:
+                print('There is no server running')
+        elif ns.action == 'status':
+            if self.tcp_server is not None and self.tcp_server.is_running():
+                print('Server is running')
+            else:
+                print('Server is not running')
 
     def recv_user_input(self, stdin, data, mask):
         input_line = stdin.read()
@@ -78,7 +78,8 @@ class TCPCL_Controller:
         else:
             args = input_line.rstrip().split()
             if len(args) > 0:
-                self.clh.parse(*args) # ignore input as \n or \r, process otherwise
+                #self.clh.parse(*args) # ignore input as \n or \r, process otherwise
+                self.clh.new_parser(*args) # ignore input as \n or \r, process otherwise
 
     def exit(self):
         self.shutdown = True
