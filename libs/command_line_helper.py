@@ -43,9 +43,12 @@ class CLH:
         sp_register.add_argument('id', type=str, help='peer id')
         sp_register.add_argument('ip', type=str, help='peer ip address')
         sp_register.add_argument('port', type=int, help='peer port')
-        sp_send = subparsers.add_parser('send', description='send a string to a peer')
-        sp_send.add_argument('id', type=str, help='peer id')
-        sp_send.add_argument('message', type=str, help='a string to be sent')
+        #sp_send = subparsers.add_parser('send', description='send bundle to a peer')
+        #sp_send.add_argument('id', type=str, help='peer id')
+        #sp_send.add_argument('message', type=str, help='a string to be sent')
+        sp_send_to = subparsers.add_parser('send_to', description='send a string to a peer')
+        sp_send_to.add_argument('id', type=str, help='peer id')
+        sp_send_to.add_argument('message', type=str, help='a string to be sent')
         sp_show = subparsers.add_parser('show_peers', description='show system information')
         sp_server = subparsers.add_parser('server', description='tcp server commands')
         sp_server.add_argument('action', choices=['start', 'stop', 'status'], type=str, help='start/stop/status')
@@ -62,7 +65,6 @@ class CLH:
                 self.valid_commands[method_name](nspace)
         except:
             print('Exception on command line')
-            pass
 
     ## -- Commands
 

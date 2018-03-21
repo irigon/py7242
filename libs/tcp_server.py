@@ -14,11 +14,12 @@ class TCP_Server:
 
     def start(self, port, reuse = 1, blocking = False):
         if self.socket is None:
+            bindaddr = ('127.0.0.1', port)
             try:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, reuse)
                 self.socket.setblocking(blocking)
-                self.socket.bind(('localhost', port))
+                self.socket.bind(bindaddr)
                 self.socket.listen(self.max_conn)
             except OSError as msg:
                 print('Could not start server on port {}: {}'.format(port, msg))
@@ -37,7 +38,7 @@ class TCP_Server:
                     print('Could not register selector: {}'.format(msg))
                     raise
                 else:
-                    print('Started server am localhost:{}'.format(port))
+                    print('Started server am {}'.format(bindaddr))
 
     def stop(self):
         if self.socket is not None:
