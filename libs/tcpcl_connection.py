@@ -1,9 +1,12 @@
 from libs import sdnv, flags
 import socket
 import selectors
+import logging
 
 class TCPCL_Connection:
     def __init__(self, sock, selector):
+        logging.getLogger(__name__)
+        logging.info('Initializing {}'.format(__class__.__name__))
         self.socket = sock
         self.socket.setblocking(False)
         self.peer_id = None
@@ -12,7 +15,6 @@ class TCPCL_Connection:
         self.data = None
 
     def __del__(self):
-        print('Cleaning up connection to {}'.format(self.peer_id))
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
@@ -24,7 +26,7 @@ class TCPCL_Connection:
         try:
             self.selector.register(self.socket, event, self.data)
         except (ValueError, KeyError) as mesg:
-            print('Invalid event mask or file descriptor: ', mesg)
+            logging.critical('Invalid event mask or file descriptor: ', mesg)
             raise
 
     def set_selector_flags(self, flags):
@@ -32,7 +34,7 @@ class TCPCL_Connection:
         try:
             self.selector.modify(self.socket, flags, self.data)
         except (ValueError, KeyError) as msg:
-            print('Error modifying selectors flag: {}'.format(msg))
+            logging.critical('Error modifying selectors flag: {}'.format(msg))
 
     def getpeername(self):
         return self.socket.getpeername()
