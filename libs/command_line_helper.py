@@ -3,9 +3,12 @@ import fcntl
 import sys
 import os
 import selectors
+import logging
 
 class CLH:
     def __init__(self, controller):
+        logging.getLogger(__name__)
+        logging.info('Initializing {}'.format(__class__.__name__))
         self.controller = controller
         self.valid_commands = dict()
         self.register_cmds()
@@ -26,9 +29,8 @@ class CLH:
             self.valid_commands[func.__name__] = func
 
     def conf_parser(self):
-        self.parser = argparse.ArgumentParser('tcpcl command line parser')
+        self.parser = argparse.ArgumentParser(usage='%(prog)s [options]')
         subparsers = self.parser.add_subparsers(title='commands', description='list of available commands')
-        sp_clear = subparsers.add_parser('clear', aliases=['cls', 'clean'], description='clear screen')
         sp_connect = subparsers.add_parser('connect', description='connect to a tcpcl node')
         sp_connect.add_argument('addr', type=str, help='destination address')
         sp_connect.add_argument('port', type=int, help='destination port')
@@ -43,6 +45,10 @@ class CLH:
         sp_register.add_argument('id', type=str, help='peer id')
         sp_register.add_argument('ip', type=str, help='peer ip address')
         sp_register.add_argument('port', type=int, help='peer port')
+        sp_register_upcn = subparsers.add_parser('register_upcn', description='register/update peer node (debug)')
+        sp_register_upcn.add_argument('upcn_id', type=str, help='upcn id')
+        sp_register_upcn.add_argument('node_id', type=str, help='node id to be registered')
+        sp_register_upcn.add_argument('path', type=str, help='path to the contact map file')
         #sp_send = subparsers.add_parser('send', description='send bundle to a peer')
         #sp_send.add_argument('id', type=str, help='peer id')
         #sp_send.add_argument('message', type=str, help='a string to be sent')
@@ -60,11 +66,16 @@ class CLH:
     def new_parser(self, *arglist):
         try:
             nspace=self.parser.parse_args(arglist)
+        except:
+            if sys.exc_info()[1].code == 0:  # valid command as --help/-h, invalid commands have code (2)
+                pass
+            else:
+                print('{} is not a valid command. Try -h/--help'.format(list(arglist)))
+        else:
             method_name=arglist[0]
             if method_name in self.valid_commands:
                 self.valid_commands[method_name](nspace)
-        except:
-            print('Exception on command line')
+
 
     ## -- Commands
 
@@ -75,7 +86,7 @@ class CLH:
         self.controller.cl.connect(ns)
 
     def disconnect(self, ns):
-        print('Mock: disconnect')
+        logging.info('Mock: disconnect')
 
     def exit(self, ns):
         self.controller.exit()
@@ -93,13 +104,16 @@ class CLH:
         self.controller.register_id_manually(ns)
 
     def register_upcn_node(self, ns):
-        print('Mock: register_upcn_node')
+        logging.info('Mock: register_upcn_node')
 
     def reconnect(self, ns):
-        print('Mock: reconnect')
+        logging.info('Mock: reconnect')
 
     def unregister(self, ns):
         self.controller.unregister(ns)
 
     def send_to(self, ns):
         self.controller.cl.send_to(ns)
+
+    def register_upcn(self, ns):
+        pass # to be implemented

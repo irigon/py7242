@@ -3,10 +3,13 @@ import selectors
 from libs import sdnv
 from libs import tcpcl_connection
 import errno
+import logging
 
 class TCPCL_CL:
 
     def __init__(self, tcpcl_id, selector):
+        logging.getLogger(__name__)
+        logging.info('Initializing {}'.format(__class__.__name__))
         self.tcpcl_id = tcpcl_id
         self.selector = selector
         self.connections=dict()
@@ -29,7 +32,7 @@ class TCPCL_CL:
     def set_next_hop(self, ns):
         assert self.tcpcl_id in self.connections, "{} is not a valid id".format(ns.tcpcl_id)
         self.sock_next_hop = self.connections[ns.tcpcl_id]
-        print('Next hop set to {}: {}'.format(ns.tcpcl_id, self.connections[ns.tcpcl_id].getpeername()))
+        logging.info('Next hop set to {}: {}'.format(ns.tcpcl_id, self.connections[ns.tcpcl_id].getpeername()))
 
     # connect as client to a server. E.g: upcn
     # ignore if connection is already stablished
@@ -51,7 +54,7 @@ class TCPCL_CL:
         try:
             s.connect(peer)
         except BlockingIOError:
-            print('Blocking I/O error on connecting to {}'.format(peer))
+            logging.warning('Blocking I/O error on connecting to {}'.format(peer))
 
 
     def reconnect(self, tcpcl_id):
@@ -76,11 +79,11 @@ class TCPCL_CL:
             txt = sock.recv(1024)
             connection = data['tcpcl_conn']
             if not txt:
-                print('Got disconnected. Cleaning up...')
+                logging.info('Got disconnected. Cleaning up...')
                 try:
                     self.selector.unregister(sock)
                 except (KeyError, ValueError) as msg:
-                    print('Error unregistered socket: {}'.format(msg))
+                    logging.critical('Error unregistered socket: {}'.format(msg))
                     raise
                 finally:
                     if connection.peer_id is None: # remove from the noname list
@@ -92,13 +95,13 @@ class TCPCL_CL:
             elif self.is_datasegment(txt):
                 self.receive_bundle(txt, data)
             else:
-                print('ERROR - Corrupted packet ignored')
+                logging.critical('ERROR - Corrupted packet ignored')
 
         elif mask & selectors.EVENT_WRITE:
             # if connection is just established:
             data['tcpcl_conn'].send()
         else:
-            print('Warning: que mascara é essa?')
+            logging.critical('Warning: que mascara é essa?')
 
     def show_peers(self):
         print('Registered peers:')
@@ -115,7 +118,7 @@ class TCPCL_CL:
     # the header is received or the connection is closed
     def recv_new_connection(self, sock, data, mask):
         new_conn, addr = sock.accept()
-        print('Accepting connection from {}'.format(addr))
+        logging.info('Accepting connection from {}'.format(addr))
 
         # every connection should have its selector, since we need to
         # turn the selector on/off for write independently
@@ -142,17 +145,17 @@ class TCPCL_CL:
         if unknown_addr in self.unnamed_connections:
             self.connections[peer] = self.unnamed_connections.pop(unknown_addr)
         else:
-            print('{} not in unnamed conns:{}'.format(unknown_addr, self.unnamed_connections))
+            logging.debug('{} not in unnamed conns:{}'.format(unknown_addr, self.unnamed_connections))
             self.unnamed_connections[unknown_addr] = tcpcl_conn
 
     def receive_header(self, txt, tcpcl_conn):
-        print('header received: {} : {}'.format(txt, txt.hex()))
+        logging.info('header received: {} : {}'.format(txt, txt.hex()))
         result = sdnv.decode_header(txt)
         tcpcl_conn.peer_id = result['eid']
         self.set_connection_id(tcpcl_conn)
 
     def receive_bundle(self, txt, data):
-        print('bundle received: {} : {}'.format(txt, txt.hex()))
+        logging.info('bundle received: {} : {}'.format(txt, txt.hex()))
 
     def is_header(self, data):
         return data.startswith(b'dtn!')

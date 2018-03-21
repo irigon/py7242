@@ -1,9 +1,12 @@
 import socket
 import selectors
+import logging
 
 
 class TCP_Server:
     def __init__(self, max_conn, callback, selector):
+        logging.getLogger(__name__)
+        logging.info('Initializing {}'.format(__class__.__name__))
         self.max_conn = max_conn
         self.socket = None
         self.callback = callback
@@ -22,12 +25,12 @@ class TCP_Server:
                 self.socket.bind(bindaddr)
                 self.socket.listen(self.max_conn)
             except OSError as msg:
-                print('Could not start server on port {}: {}'.format(port, msg))
+                logging.critical('Could not start server on port {}: {}'.format(port, msg))
                 try:
                     self.socket.shutdown(socket.SHUT_RDWR)
                     self.socket.close()
                 except OSError as msg:
-                    print('Problem shutting the socket down: {}'.format(msg))
+                    logging.critical('Problem shutting the socket down: {}'.format(msg))
                 self.socket = None
                 return
             else:
@@ -35,10 +38,10 @@ class TCP_Server:
                     self.selector.register(self.socket, selectors.EVENT_READ,
                                            {'func': self.callback})
                 except (ValueError, KeyError) as msg:
-                    print('Could not register selector: {}'.format(msg))
+                    logging.critical('Could not register selector: {}'.format(msg))
                     raise
                 else:
-                    print('Started server am {}'.format(bindaddr))
+                    logging.info('Started server am {}'.format(bindaddr))
 
     def stop(self):
         if self.socket is not None:
@@ -46,9 +49,9 @@ class TCP_Server:
                 try:
                     self.selector.unregister(self.socket)
                 except KeyError:
-                    print('It seems the socket was not registered (ignoring)')
+                    logging.warning('It seems the socket was not registered (ignoring)')
                 except ValueError:
-                    print('Invalid selector on unregister')
+                    logging.critical('Invalid selector on unregister')
                     raise
             self.socket.close()
             self.socket = None
