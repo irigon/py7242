@@ -79,3 +79,9 @@ class TestTCPServer(unittest.TestCase):
 
         self.assertEqual(output, 1)
 
+    # Starting server on an invalid port should not break
+    def test_start_server_invalid_port(self):
+        m_selector = selectors.DefaultSelector()
+        ts = tcp_server.TCP_Server(max_conn=1, callback=None, selector=m_selector)
+        ts.start(100000)
+

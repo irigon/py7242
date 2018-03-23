@@ -15,7 +15,10 @@ class TCPCL_Connection:
         self.data = None
 
     def __del__(self):
-        self.socket.shutdown(socket.SHUT_RDWR)
+        try:
+            self.socket.shutdown(socket.SHUT_RDWR)
+        except:
+            pass
         self.socket.close()
 
     def register_callback(self, callback):
