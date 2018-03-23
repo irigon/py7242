@@ -23,9 +23,9 @@ class CLH:
         fcntl.fcntl(sys.stdin, fcntl.F_SETFL, orig_fl | os.O_NONBLOCK)
 
     def register_cmds(self):
-        for func in [self.clear, self.connect, self.disconnect, self.exit, self.nexthop,
-                     self.show_peers, self.server, self.register, self.register_upcn,
-                     self.reconnect, self.unregister, self.send_to]:
+        for func in [self.clear, self.connect, self.disconnect, self.exit, self.load,
+                     self.nexthop, self.show_peers, self.server, self.register,
+                     self.register_upcn, self.reconnect, self.unregister, self.send_to]:
             self.valid_commands[func.__name__] = func
 
     def conf_parser(self):
@@ -37,6 +37,8 @@ class CLH:
         sp_disconnect = subparsers.add_parser('disconnect', description='disconnects from a registered peer')
         sp_disconnect.add_argument('id', type=str, help='peer id')
         sp_exit = subparsers.add_parser('exit', description='exit tcpcl')
+        load = subparsers.add_parser('load', description='execute a list of commands from file')
+        load.add_argument('path', type=str, help='relative path to script file')
         sp_next_hop = subparsers.add_parser('nexthop', description='set "default route"')
         sp_next_hop.add_argument('id', type=str, help='next hop id')
         sp_reconnect = subparsers.add_parser('reconnect', description='restarts connection to peer')
@@ -48,9 +50,6 @@ class CLH:
         sp_register_upcn = subparsers.add_parser('register_upcn', description='register/update peer node (debug)')
         sp_register_upcn.add_argument('ip', type=str, help='upcn_server ip address')
         sp_register_upcn.add_argument('port', type=str, help='upcn_server port')
-        #sp_send = subparsers.add_parser('send', description='send bundle to a peer')
-        #sp_send.add_argument('id', type=str, help='peer id')
-        #sp_send.add_argument('message', type=str, help='a string to be sent')
         sp_send_to = subparsers.add_parser('send_to', description='send a string to a peer')
         sp_send_to.add_argument('id', type=str, help='peer id')
         sp_send_to.add_argument('message', type=str, help='a string to be sent')
@@ -89,6 +88,17 @@ class CLH:
 
     def exit(self, ns):
         self.controller.exit()
+
+    def load(self, ns):
+        try:
+            with open(ns.path) as f:
+                    lines = [ x.strip().split(' ') for x in f.readlines()
+                              if not x.startswith('#') and x.strip() != '']
+        except FileNotFoundError as fnf:
+            print('File "{}" could not be found.'.format(ns.path))
+        else:
+            for command in lines:
+                self.new_parser(*command)
 
     def nexthop(self, ns):
         self.controller.cl.set_next_hop(ns)

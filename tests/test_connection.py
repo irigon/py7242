@@ -24,7 +24,7 @@ class TestTCPCL_Connection(unittest.TestCase):
 
     def test_enqueue(self):
         self.tc_conn.enqueue('bla')
-        self.assertEquals(self.tc_conn.out_msg_queue[0], 'bla')
+        self.assertEqual(self.tc_conn.out_msg_queue[0], 'bla')
 
 
 
