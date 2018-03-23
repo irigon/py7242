@@ -1,8 +1,9 @@
 import unittest
-from libs.tcpcl_convergence_layer import TCPCL_CL
+import sys, os
 
 sys.path.insert(0, os.path.abspath('.'))
 
+from libs.tcpcl_convergence_layer import TCPCL_CL
 
 # A TCP convergence layer shall have one tcp connection.
 # When the convergence layer is destroyed, the tcp connection is also destroyed
