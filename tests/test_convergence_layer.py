@@ -1,6 +1,9 @@
 import unittest
 from libs.tcpcl_convergence_layer import TCPCL_CL
 
+sys.path.insert(0, os.path.abspath('.'))
+
+
 # A TCP convergence layer shall have one tcp connection.
 # When the convergence layer is destroyed, the tcp connection is also destroyed
 # The send method sends data through the socket connection
