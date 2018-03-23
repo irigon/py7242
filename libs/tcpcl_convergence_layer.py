@@ -2,7 +2,7 @@ import socket
 import selectors
 from libs import sdnv
 from libs import tcpcl_connection
-import errno
+from libs import flags
 import logging
 
 class TCPCL_CL:
@@ -63,8 +63,22 @@ class TCPCL_CL:
     # send_to is currently used for debugging, when sending from command line
     #
     def send_to(self, ns):
+        if ns.id not in self.connections:
+            print('Unknown id {}'.format(ns.id))
+            logging.warning('Unknown id {}'.format(ns.id))
+            return
         conn = self.connections[ns.id]
-        self.send(conn, ns.message.encode())
+        #self.send(conn, ns.message.encode())
+        tcpcl_encoded = self.encode_tcpcl(ns.message.encode())
+        self.send(conn, tcpcl_encoded)
+
+    # https://tools.ietf.org/html/rfc7242#section-5.2
+    # Only transmitting bundle in a sigle segment (SE == 0x3)
+    # TODO organize the code
+    def encode_tcpcl(self, data):
+        return bytes([flags.MessageCodeType.DATA_SEGMENT << 4]) + b'\x03' \
+               + sdnv.encode(len(data)) \
+               + data
 
     def send(self, conn, byte_data):
         # enqueue and register read & write #TODO

@@ -16,9 +16,9 @@ class TCPCL_Controller:
     def __init__(self, cl_id):
         logging.getLogger(__name__)
         logging.info('Initializing TCPCL_Controller')
-        self.id = cl_id
+        self.clid = cl_id
         self.selector = selectors.DefaultSelector()
-        self.cl = tcpcl_convergence_layer.TCPCL_CL(self.id, self.selector)
+        self.cl = tcpcl_convergence_layer.TCPCL_CL(self.clid, self.selector)
         self.clh = command_line_helper.CLH(self)
         self.clh.register_callback(self.selector, self.recv_user_input)
         self.tcp_server = None    # tcp_server is optional, do not instantiate on creation
@@ -28,27 +28,30 @@ class TCPCL_Controller:
     # that belongs to convergence layer, that sets the id when the header arrives
     def register_id_manually(self, ns):
         logging.debug('registering_id_manually(ns:{})'.format(ns))
-        # if cl_id exists, ignore
-        if ns.id in self.cl.connections:
+
+        if ns.id in self.cl.connections:    # if cl_id exists, ignore
             logging.warning('{} is already set to the connection: {}. Ignoring...'.
                   format(ns.id, self.cl.connections[ns.id].getpeername()))
             return
 
         # if (ip, port) exists, rename it.
-        for list in [self.cl.connections, self.cl.unnamed_connections]:
-            for key, conn in list.items():
+        dic_list = [ x for x in [self.cl.connections, self.cl.unnamed_connections] if len(x) > 0]
+
+        item = None
+        for dic in dic_list:
+            for key, conn in dic.items():
                 if conn.getpeername() == (ns.ip, ns.port):
-                    item = list.pop(key)
+                    item = dic.pop(key)
                     item.peer_id = ns.id
                     break
+        assert item is not None, 'You can not register a non connected node'
         self.cl.connections[ns.id]=item
-
 
     def unregister(self, ns):
         logging.debug('unregister')
 
     # register a peer in upcn. The peer should be already locally registered
-    def upcn_register(self, ns):
+    def register_upcn(self, ns):
         pass
     
     def server(self, ns):
@@ -86,9 +89,8 @@ class TCPCL_Controller:
         else:
             args = input_line.rstrip().split()
             if len(args) > 0:
-                #self.clh.parse(*args) # ignore input as \n or \r, process otherwise
                 self.clh.new_parser(*args) # ignore input as \n or \r, process otherwise
-        sys.stdout.write('tcpcl> ')
+        sys.stdout.write('{}> '.format(self.clid))
         sys.stdout.flush()
 
     def exit(self):

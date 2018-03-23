@@ -24,7 +24,7 @@ class CLH:
 
     def register_cmds(self):
         for func in [self.clear, self.connect, self.disconnect, self.exit, self.nexthop,
-                     self.show_peers, self.server, self.register, self.register_upcn_node,
+                     self.show_peers, self.server, self.register, self.register_upcn,
                      self.reconnect, self.unregister, self.send_to]:
             self.valid_commands[func.__name__] = func
 
@@ -46,9 +46,8 @@ class CLH:
         sp_register.add_argument('ip', type=str, help='peer ip address')
         sp_register.add_argument('port', type=int, help='peer port')
         sp_register_upcn = subparsers.add_parser('register_upcn', description='register/update peer node (debug)')
-        sp_register_upcn.add_argument('upcn_id', type=str, help='upcn id')
-        sp_register_upcn.add_argument('node_id', type=str, help='node id to be registered')
-        sp_register_upcn.add_argument('path', type=str, help='path to the contact map file')
+        sp_register_upcn.add_argument('ip', type=str, help='upcn_server ip address')
+        sp_register_upcn.add_argument('port', type=str, help='upcn_server port')
         #sp_send = subparsers.add_parser('send', description='send bundle to a peer')
         #sp_send.add_argument('id', type=str, help='peer id')
         #sp_send.add_argument('message', type=str, help='a string to be sent')
@@ -103,9 +102,6 @@ class CLH:
     def register(self, ns):
         self.controller.register_id_manually(ns)
 
-    def register_upcn_node(self, ns):
-        logging.info('Mock: register_upcn_node')
-
     def reconnect(self, ns):
         logging.info('Mock: reconnect')
 
@@ -116,4 +112,9 @@ class CLH:
         self.controller.cl.send_to(ns)
 
     def register_upcn(self, ns):
-        pass # to be implemented
+        self.controller.register_upcn(ns)
+
+    def upload_contacts(self, ns):
+        if 'upcn_server' not in self.controller.cl.connections:
+            print('You need to register upcn first')
+            return

@@ -41,7 +41,7 @@ class TCP_Server:
                     logging.critical('Could not register selector: {}'.format(msg))
                     raise
                 else:
-                    logging.info('Started server am {}'.format(bindaddr))
+                    print('Started server am {}'.format(bindaddr))
 
     def stop(self):
         if self.socket is not None:

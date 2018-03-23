@@ -20,6 +20,10 @@ class BPCF_v6:
     REPORT_DELIVERY = 0x20000
     REPORT_DELETION = 0x40000
 
+    # this probably do not belongs here. TODO
+    # https://tools.ietf.org/html/rfc5050#section-4.5.2
+    BLOCK_TYPE_PAYLOAD = 1
+
 # Extension block flags
 class EBF:
     NONE = 0x00
@@ -31,4 +35,10 @@ class EBF:
     FWD_UNPROC = 0x20
     HAS_EID_REF_FIELD = 0x40
 
-
+class MessageCodeType:
+    DATA_SEGMENT = 0x1
+    ACK_SEGMENT = 0x2
+    REFUSE_BUNDLE = 0x3
+    KEEPALIVE = 0x4
+    SHUTDOWN = 0x5
+    LENGTH = 0x6
