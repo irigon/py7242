@@ -12,5 +12,5 @@ install:
   - pip install coveralls
   - python setup.py -q install
 script:
-  - nosetests --with-coverage
+  - nosetests -v --with-coverage tests
 after_success: coveralls
