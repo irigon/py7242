@@ -5,10 +5,10 @@ import logging
 
 class TCP_Server:
     def __init__(self, max_conn, callback, selector):
+        self.socket = None
         logging.getLogger(__name__)
         logging.info('Initializing {}'.format(__class__.__name__))
         self.max_conn = max_conn
-        self.socket = None
         self.callback = callback
         self.selector = selector
 
@@ -32,6 +32,9 @@ class TCP_Server:
                 except OSError as msg:
                     logging.critical('Problem shutting the socket down: {}'.format(msg))
                 self.socket = None
+            except Exception as msg:
+                logging.critical('Problem starting server: {}'.format(msg))
+                print('Server not started.')
                 return
             else:
                 try:
@@ -41,7 +44,9 @@ class TCP_Server:
                     logging.critical('Could not register selector: {}'.format(msg))
                     raise
                 else:
+                    logging.info('Started server am {}'.format(bindaddr))
                     print('Started server am {}'.format(bindaddr))
+                    return 0
 
     def stop(self):
         if self.socket is not None:

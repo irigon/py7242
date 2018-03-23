@@ -1,5 +1,6 @@
 import socket
 import selectors
+import struct
 from libs import sdnv
 from libs import tcpcl_connection
 from libs import flags
@@ -7,7 +8,7 @@ import logging
 
 class TCPCL_CL:
 
-    def __init__(self, tcpcl_id, selector):
+    def __init__(self, tcpcl_id, selector=None):
         logging.getLogger(__name__)
         logging.info('Initializing {}'.format(__class__.__name__))
         self.tcpcl_id = tcpcl_id
@@ -18,13 +19,27 @@ class TCPCL_CL:
         self.unnamed_connections = dict()   # (ip, dst): connection_obj
 
     # https://tools.ietf.org/html/rfc7242#section-4.1
-    def get_header(self):
+    def encode_header(self, magic=b'dtn!', version=b'\x03', flags=b'\x00', keepalive=b'\x00\x00'):
         assert self.tcpcl_id is not None, 'TCPCL id not set'
         if self.header is None:
             enc_id  = self.tcpcl_id.encode("ascii")
             enc_len = sdnv.encode(len(enc_id))
-            self.header =  b'dtn!\x03\x00\x00\x00' + enc_len + enc_id
+            self.header = magic + version + flags + keepalive + enc_len + enc_id
         return self.header
+
+    def decode_header(h):
+        assert h[:4] == b'dtn!', 'header should start with "dtn!"'
+        assert len(h) > 8, 'header too short'
+        result = {
+            "version": h[4],
+            "flags": h[5],
+            "keepalive": struct.unpack("!h", h[6:8])[0]
+        }
+
+        eid_len, eid_len_size = sdnv.decode(h, 8)
+        assert len(h) == 8 + eid_len_size + eid_len, "header length does not match"
+        result["eid"] = h[8 + eid_len_size:].decode("ascii")
+        return result
 
     # is basically set default route.
     # when a send is used to an id that is unknown, the message is sent to the next hop.
@@ -49,19 +64,17 @@ class TCPCL_CL:
         tc = tcpcl_connection.TCPCL_Connection(s, self.selector)
         tc.register_callback(self.receive_socket_signal)
         tc.register_event(selectors.EVENT_WRITE | selectors.EVENT_READ)
-        tc.enqueue(self.get_header())
+        tc.enqueue(self.encode_header())
         self.unnamed_connections[peer] = tc
         try:
             s.connect(peer)
         except BlockingIOError:
             logging.warning('Blocking I/O error on connecting to {}'.format(peer))
 
-
     def reconnect(self, tcpcl_id):
         pass
 
     # send_to is currently used for debugging, when sending from command line
-    #
     def send_to(self, ns):
         if ns.id not in self.connections:
             print('Unknown id {}'.format(ns.id))
@@ -142,7 +155,7 @@ class TCPCL_CL:
         peers = tc.getpeername()
         self.unnamed_connections[peers] = tc
         # send_header
-        self.send(tc, self.get_header())
+        self.send(tc, self.encode_header())
 
 
     # yet to be implemented

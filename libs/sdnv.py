@@ -17,28 +17,15 @@ def encode(data):
     return encoded
 
 # given an array of bytes, return an int
-def decode(data):
+def decode(data, offset=0):
     decoded = 0
-    for idx, ch in enumerate(data):
+    for idx, ch in enumerate(data[offset:]):
         decoded <<=7
         decoded |= (ch & 0x7f)
         if not ch & 0x80:
             break
     return decoded, idx + 1                # size = idx+1
 
-def decode_header(h):
-    assert h[:4] == b'dtn!', 'header should start with "dtn!"'
-    assert len(h) > 8, 'header too short'
-    result = {
-        "version": h[4],
-        "flags": h[5],
-        "keepalive": struct.unpack("!h", h[6:8])[0]
-    }
-
-    eid_len, eid_len_size = decode(h, 8)
-    assert len(h) == 8 + eid_len_size + eid_len, "header length does not match"
-    result["eid"] = h[8 + eid_len_size:].decode("ascii")
-    return result
 '''
 # https://tools.ietf.org/html/rfc5050#section-4.5
 # [sdvn] fields have variable size

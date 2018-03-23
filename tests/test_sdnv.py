@@ -3,6 +3,7 @@ import sys, os
 
 sys.path.insert(0, os.path.abspath('.'))
 from libs import sdnv
+from libs.tcpcl_convergence_layer import TCPCL_CL
 
 class TestSDVN(unittest.TestCase):
 
@@ -10,7 +11,7 @@ class TestSDVN(unittest.TestCase):
         pass
 
     # tests from https://tools.ietf.org/html/rfc5050
-    def test_encode(self):
+    def test_enc_dec(self):
         encoded = sdnv.encode(0xABC)
         self.assertEqual(encoded, b'\x95<')     # 10010101 00111100
         decoded = sdnv.decode(encoded)
@@ -35,4 +36,8 @@ class TestSDVN(unittest.TestCase):
         self.assertEqual(encoded, b'\x00')
         decoded = sdnv.decode(encoded)
         self.assertEqual(decoded[0], 0x0)
+
+
+
+
 

@@ -40,9 +40,10 @@ class TestTCPServer(unittest.TestCase):
     # Call server stop and verify that the port is not used anymore
     # Restart reconnection and verify that no error occurs and that the port is open
     def test_create_tcp_server(self):
-        ts = tcp_server.TCP_Server(self.myport, 1)
+        m_selector = selectors.DefaultSelector()
+        ts = tcp_server.TCP_Server(max_conn=1, callback=None, selector=m_selector)
         self.assertFalse(is_port_openned(self.myport))
-        ts.start()
+        ts.start(self.myport)
         self.assertTrue(ts.is_running())
         self.assertTrue(is_port_openned(self.myport))
         ts.stop()
@@ -61,11 +62,8 @@ class TestTCPServer(unittest.TestCase):
         m_selector = selectors.DefaultSelector()
 
         # Instantiate TCP_Server and start listening to self.myport
-        ts = tcp_server.TCP_Server(self.myport, max_conn=1, selector=m_selector)
-        ts.start()
-
-        # register callback
-        m_selector.register(ts.socket, selectors.EVENT_READ, mytrigger)
+        ts = tcp_server.TCP_Server(max_conn=1, callback=mytrigger, selector=m_selector)
+        ts.start(self.myport)
 
         # create the client thread
         # this could be in fact done in the non blocking, non threading way:
@@ -76,7 +74,7 @@ class TestTCPServer(unittest.TestCase):
 
         # the main thread should capture the connection request and trigger "mytrigger", updating output
         for k, mask in m_selector.select():
-            callback = k.data
+            callback = k.data['func']
             output = callback(output)
 
         self.assertEqual(output, 1)
