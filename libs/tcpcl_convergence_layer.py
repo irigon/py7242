@@ -27,7 +27,7 @@ class TCPCL_CL:
             self.header = magic + version + flags + keepalive + enc_len + enc_id
         return self.header
 
-    def decode_header(h):
+    def decode_header(self, h):
         assert h[:4] == b'dtn!', 'header should start with "dtn!"'
         assert len(h) > 8, 'header too short'
         result = {
@@ -66,6 +66,7 @@ class TCPCL_CL:
         tc.register_event(selectors.EVENT_WRITE | selectors.EVENT_READ)
         tc.enqueue(self.encode_header())
         self.unnamed_connections[peer] = tc
+        print('Connecting to {}...'.format(peer))
         try:
             s.connect(peer)
         except BlockingIOError:
@@ -177,7 +178,7 @@ class TCPCL_CL:
 
     def receive_header(self, txt, tcpcl_conn):
         logging.info('header received: {} : {}'.format(txt, txt.hex()))
-        result = sdnv.decode_header(txt)
+        result = self.decode_header(txt)
         tcpcl_conn.peer_id = result['eid']
         self.set_connection_id(tcpcl_conn)
 
