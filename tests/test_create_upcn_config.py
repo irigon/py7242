@@ -24,7 +24,7 @@ class TestCreateConfig(unittest.TestCase):
         self.assertEqual(contact, (now + 10, now + 12, 500))
 
     def test_read_clist_from_file(self):
-        file = 'clist_example'
+        file = 'tests/clist_example'
         addr = '127.0.0.1'
         port = 42421
         uuid = 'dtn:1'
