@@ -24,7 +24,7 @@ class TestCreateConfig(unittest.TestCase):
         self.assertEqual(contact, (now + 10, now + 12, 500))
 
     def test_read_clist_from_file(self):
-        file = 'tests/clist_example'
+        file = 'clist_example'
         addr = '127.0.0.1'
         port = 42421
         uuid = 'dtn:1'
@@ -33,5 +33,5 @@ class TestCreateConfig(unittest.TestCase):
             lines = [x.rstrip() for x in contact_list.readlines()]
 
         contacts = [ upcn.make_contact_from_offset(*(x.split(' '))) for x in lines]
-        ctest = upcn.create_contact(uuid, addr, port, contacts)
+        #ctest = upcn.create_contact(uuid, addr, port, contacts)
         print(contacts)
