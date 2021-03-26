@@ -10,6 +10,5 @@ def create_contact(uuid, address, port, contact_list):
 def make_contact_from_offset(start_offset, end_offset, bitrate, ctime=None):
     if ctime is None:
         ctime = int(time.time()) - 946684800
-    return '{{{},{},{}}}'
     return (ctime + int(start_offset), ctime + int(end_offset), bitrate)
 
